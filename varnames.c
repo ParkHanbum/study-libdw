@@ -20,7 +20,7 @@ static LIST_HEAD(global_vars);
 
 static void print_global_vars()
 {
-	struct global_var *gv;
+	struct variable *gv;
 
 	if (list_empty(&global_vars))
 		pr("List is Empty", 0);
@@ -61,8 +61,8 @@ void handle(Dwarf *dbg, Dwarf_Die *die, int n)
 	Dwarf_Die type;
 
 	char *result = NULL;
-	struct global_var *gvar;
-	gvar = malloc(sizeof(struct global_var));
+	struct variable *gvar;
+	gvar = malloc(sizeof(struct variable));
 
 	if (resolve_type_name(dwarf_formref_die (dwarf_attr_integrate (die,
 						DW_AT_type,

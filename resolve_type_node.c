@@ -21,7 +21,7 @@ int resolve_type_node(Dwarf_Die *die, struct list_head *head)
 		pr("[Resolving] %s\n", 0, dwarf_diename(die));
 		pr("[TAG] %s\n", 0, dwarf_tag_string(dwarf_tag(die)));
 		tnode = malloc(sizeof(struct type_node));
-		memcpy(&tnode->type.die, die, sizeof(Dwarf_Die));
+		memcpy(&tnode->die, die, sizeof(Dwarf_Die));
 		list_add(&tnode->list, head);
 		if (!dwarf_hasattr(die, DW_AT_type)) {
 			break;

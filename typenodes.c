@@ -31,8 +31,8 @@ void handle_die(Dwarf *dbg, Dwarf_Die *die, int n)
 	Dwarf_Attribute attr;
 	Dwarf_Die type;
 
-	struct global_var *gvar;
-	gvar = malloc(sizeof(struct global_var));
+	struct variable *gvar;
+	gvar = malloc(sizeof(struct variable));
 	INIT_LIST_HEAD(&gvar->tnode.list);
 	pr("VAR NAME : %s\n", 0, dwarf_diename(die));
 	if (resolve_type_node(
@@ -50,8 +50,8 @@ void handle_die(Dwarf *dbg, Dwarf_Die *die, int n)
 		pr("Start Listing resolved types\n", 3);
 		list_for_each_entry(entry, &(gvar->tnode.list), list) {
 			pr("%s %s \n", 6,
-				dwarf_tag_string(dwarf_tag(&entry->type.die)),
-				dwarf_diename(&entry->type.die));
+				dwarf_tag_string(dwarf_tag(&entry->die)),
+				dwarf_diename(&entry->die));
 		}
 	}
 

@@ -3,34 +3,32 @@
 #include <elfutils/known-dwarf.h>
 #include "list.h"
 
-struct type {
-	/* to present type structure. */
-	struct list_head	*child;
-	bool			has_child;
+struct type_node {
+	struct list_head	list;
 	Dwarf_Die		die;
 };
 
-struct type_node {
+struct variable {
 	struct list_head	list;
-	struct type		type;
-};
-
-struct resolved_type {
 	char			*var_name;
 	char			*type_name;
-	Dwarf_Word		bound_size;
-	Dwarf_Word		base_size;
+
 	bool			is_array;
 	bool			is_pointer;
-};
+	bool			has_child;
 
-struct global_var {
-	struct list_head	list;
-	char			*var_name;
-	char			*type_name;
 	Dwarf_Word		size;
-	struct resolved_type	*resolved_type;
+	Dwarf_Word		bound_size;
+	Dwarf_Word		base_size;
+
+	// absolute address of variable.
+	uintptr_t		addr;
+
+	// keep type_node for debugging purpose
 	struct type_node	tnode;
+
+	// contain member variable.
+	struct list_head	member;
 };
 
 #ifdef dev

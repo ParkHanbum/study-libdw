@@ -248,8 +248,8 @@ int resolve_type_name(Dwarf_Die *die, char **result)
 	Dwarf_Attribute attr;
 	Dwarf_Die type;
 
-	struct global_var *gvar;
-	gvar = malloc(sizeof(struct global_var));
+	struct variable *gvar;
+	gvar = malloc(sizeof(struct variable));
 	INIT_LIST_HEAD(&gvar->tnode.list);
 	pr("[START RESOLVE TYPE]===========================\n", 0);
 	pr("VAR NAME : %s\n", 0, dwarf_diename(die));
@@ -263,7 +263,7 @@ int resolve_type_name(Dwarf_Die *die, char **result)
 	struct type_node *entry;
 	pr("Start Listing resolved types\n", 3);
 	list_for_each_entry_reverse(entry, &(gvar->tnode.list), list) {
-		Dwarf_Die curr_die = entry->type.die;
+		Dwarf_Die curr_die = entry->die;
 
 		pr("%s %s \n", 6,
 				dwarf_tag_string(dwarf_tag(&curr_die)),
