@@ -106,7 +106,10 @@ DW_TAG_array_type
 #define TYPE_STR_pointer	"*"
 #define TYPE_STR_structure	"struct"
 
+// to keep current iterated CU
 extern Dwarf *dbg;
+extern Dwarf_Die Die_CU;
+
 int resolve_type_node(Dwarf_Die *die, struct list_head *tnode);
 int resolve_type_name(Dwarf_Die *die, char **result);
-
+int default_lower_bound(int lang, Dwarf_Sword *result);

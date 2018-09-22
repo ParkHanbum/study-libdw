@@ -1,11 +1,11 @@
 VERSION := 0.0.1
 
-CFLAGS := -g -pg -Ddev=1 
+CFLAGS := -g -Ddev=1 
 LDFLAGS := -ldw -lelf
 
 GVAR_SRCS := gvar.c
 STUDY_SRCS := show-die-info.c
-RESOLVE_TYPE_NAME := resolve_type_node.c resolve_type_name.c
+RESOLVE_TYPE_NAME := resolve_type_node.c resolve_type_name.c default_lower_bound.c
 
 target: $(GVAR_SRCS)
 	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS)

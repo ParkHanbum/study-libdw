@@ -8,11 +8,12 @@
 #include <unistd.h>
 #include <libgen.h>
 
-//#include "dwarf.h"
+#include "dwarf.h"
 #include "dwarf_util.h"
 
-// declare global variable
+// keep current CU information to global variable.
 Dwarf *dbg;
+Dwarf_Die Die_CU;
 
 // struct list_head global_vars;
 static LIST_HEAD(global_vars);
@@ -140,8 +141,11 @@ int main (int argc, char *argv[])
 					offsetsize);
 
 			Dwarf_Die die;
-			if (dwarf_offdie (dbg, old_off + hsize, &die) != NULL)
+			if (dwarf_offdie (dbg, old_off + hsize, &die) != NULL) {
+				// keep CU Die
+				memcpy(&Die_CU, &die, sizeof(Dwarf_Die));
 				handle (dbg, &die, 1);
+			}
 
 			old_off = off;
 		}

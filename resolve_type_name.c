@@ -79,62 +79,67 @@ int dwarf_prefix_name(TYPE_PREFIX type_prefix, char **res)
 }
 
 
-Dwarf_Word dwarf_array_size(Dwarf_Die *array_die)
+Dwarf_Word get_array_size(Dwarf_Die *array_die)
 {
 	Dwarf_Die *die;
 	Dwarf_Word eltsize;
 	Dwarf_Die type_mem, aggregate_type_mem;
-	Dwarf_Word count;
-	Dwarf_Attribute *attr_mem;
+	Dwarf_Attribute attr_mem;
+	Dwarf_Word count = 0;
 
-	if (dwarf_siblingof(array_die, die) == 0) {
+	die = malloc(sizeof(Dwarf_Die));
+
+	pr("=================== array size ====================\n", 0);
+
+	if (dwarf_child(array_die, die) == 0) {
 		if (dwarf_tag(die) != DW_TAG_subrange_type) {
 			// return 0 unknown array size;
 			return 0;
 		}
 
 		/* This has either DW_AT_count or DW_AT_upper_bound.  */
-		if (dwarf_attr_integrate(die, DW_AT_count, attr_mem) != NULL)
+		if (dwarf_attr_integrate(die, DW_AT_count, &attr_mem) != NULL)
 		{
-			if (dwarf_formudata(attr_mem, &count) != 0)
-				return -1;
+			if (dwarf_formudata(&attr_mem, &count) != 0)
+				return 0;
 		}
 		else
 		{
 			Dwarf_Sword upper;
 			Dwarf_Sword lower;
+			upper = 0, lower = 0;
 			if (dwarf_formsdata(dwarf_attr_integrate
 						(die, DW_AT_upper_bound,
-						 attr_mem), &upper) != 0)
-				return -1;
+						 &attr_mem), &upper) != 0)
+				return 0;
 
 			/* Having DW_AT_lower_bound is optional.  */
 			if (dwarf_attr_integrate(die, DW_AT_lower_bound,
-						attr_mem) != NULL)
+						&attr_mem) != NULL)
 			{
-				if (dwarf_formsdata(attr_mem, &lower) != 0)
-					return -1;
+				if (dwarf_formsdata(&attr_mem, &lower) != 0)
+					return 0;
 			}
 			else
 			{
-				Dwarf_Die cu;
-				// CUDIE = compile unit Die.first Die of current CU
-				dwarf_offdie(dbg, dwarf_cuoffset(die), &cu);
-				// Dwarf_Die cu = CUDIE (die->cu);
-				int lang = dwarf_srclang(&cu);
-				if (lang == -1 || dwarf_default_lower_bound(lang, &lower) != 0)
-					return -1;
+				int lang = dwarf_srclang(&Die_CU);
+				if (lang == -1 || default_lower_bound(lang, &lower) != 0)
+					return 0;
 			}
+			pr("Lower : %lu \t Uppder : %lu\n", 5, lower, upper);
 			if (lower > upper) {
 				pr("LOWER > UPPER\n", 5);
-				return -1;
+				return 0;
 			}
-			count = upper - lower + 1;
+			if (lower == 0 && upper == 0)
+				count = 0;
+			else
+				count = upper - lower + 1;
 		}
 		return count;
 	}
 
-	return -1;
+	return 0;
 }
 
 int dwarf_type_name(Dwarf_Die *die, char **res)
@@ -146,7 +151,7 @@ int dwarf_type_name(Dwarf_Die *die, char **res)
 	int tag = dwarf_tag(die);
 
 	if (tag == DW_TAG_array_type) {
-		Dwarf_Word val = dwarf_array_size(die);
+		Dwarf_Word val = get_array_size(die);
 		if (val > 0) {
 			sprintf(assemble, "[%lu]", val);
 		}
