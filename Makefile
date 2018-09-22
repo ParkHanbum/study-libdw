@@ -19,7 +19,10 @@ varnames: varnames.c $(RESOLVE_TYPE_NAME)
 typenodes: typenodes.c resolve_type_node.c
 	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
-all: target sample typenodes varnames
+show-die-info: show-die-info.c
+	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+all: target sample typenodes varnames show-die-info
 
 clean:
 	rm varnames target sample typenodes $(wildcard.o)
