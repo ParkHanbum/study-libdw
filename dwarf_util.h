@@ -17,9 +17,14 @@ struct variable {
 	bool			is_pointer;
 	bool			has_child;
 
+	// size of variable
 	Dwarf_Word		size;
+	// size of array (eg. upper - lower)
 	Dwarf_Word		bound_size;
+	// basetype mean "char" in "char *"
 	Dwarf_Word		base_size;
+	// encoding type. like signed
+	Dwarf_Word		enctype;
 
 	// absolute address of variable.
 	uintptr_t		addr;
@@ -28,13 +33,14 @@ struct variable {
 	struct type_node	tnode;
 
 	// contain member variable.
-	struct list_head	member;
+	struct list_head	*member;
 };
 
 #ifdef dev
 # define pr(fmt, n, ...) 				\
 ({							\
-	printf("%*s " fmt, n * 5, "", ## __VA_ARGS__);	\
+ 	printf("%20s:%-5d\t", __FILE__, __LINE__);		\
+	printf("%*s  " fmt, n * 5, "", ## __VA_ARGS__);	\
 })
 #else
 # define pr(fmt, n, ...)
@@ -64,18 +70,20 @@ static const char *dwarf_attr_string (unsigned int attrnum)
 	}
 }
 
-/*
-DW_TAG_typedef
-DW_TAG_const_type
-DW_TAG_volatile_type
-DW_TAG_restrict_type
-DW_TAG_atomic_type
-DW_TAG_immutable_type
-DW_TAG_packed_type
-DW_TAG_shared_type
-DW_TAG_array_type
-*/
+static const char *dwarf_encoding_string (unsigned int code)
+{
+	static const char *const known[] =
+	{
+#define DWARF_ONE_KNOWN_DW_ATE(NAME, CODE) [CODE] = #NAME,
+		DWARF_ALL_KNOWN_DW_ATE
+#undef DWARF_ONE_KNOWN_DW_ATE
+	};
 
+	if (code < sizeof (known) / sizeof (known[0]))
+		return known[code];
+
+	return NULL;
+}
 
 #define TYPE_PREFIX		unsigned long long
 #define TYPE_PREFIX_noprefix	0
@@ -87,7 +95,6 @@ DW_TAG_array_type
 #define TYPE_PREFIX_immutable	1<<5
 #define TYPE_PREFIX_packed	1<<6
 #define TYPE_PREFIX_shared	1<<7
-
 
 // Prefix Strings
 #define TYPE_STR_typedef	"typedef"
@@ -108,6 +115,6 @@ DW_TAG_array_type
 extern Dwarf *dbg;
 extern Dwarf_Die Die_CU;
 
-int resolve_type_node(Dwarf_Die *die, struct list_head *tnode);
-int resolve_type_name(Dwarf_Die *die, char **result);
+int resolve_variable(Dwarf_Die *die, struct variable *var);
+int resolve_type_name(Dwarf_Die *die, struct variable *var);
 int default_lower_bound(int lang, Dwarf_Sword *result);

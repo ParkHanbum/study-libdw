@@ -31,7 +31,7 @@
 
 /* Determine default lower bound from language, as per the DWARF5
    "Subrange Type Entries" table.  */
-int default_lower_bound (int lang, Dwarf_Sword *result)
+int default_lower_bound(int lang, Dwarf_Sword *result)
 {
 	switch (lang)
 	{
