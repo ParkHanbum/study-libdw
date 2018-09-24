@@ -23,8 +23,14 @@ struct inner2 {
 	char arr[20];
 };
 
-
 struct global {
+	int a;
+	long b;
+	char *c;
+	char arr[20];
+};
+
+struct global2 {
 	int a;
 	long b;
 	char *c;

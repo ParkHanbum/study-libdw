@@ -1,4 +1,5 @@
 #include <dwarf.h>
+#include <stdlib.h>
 #include <elfutils/libdw.h>
 #include <elfutils/known-dwarf.h>
 #include "list.h"
@@ -33,23 +34,25 @@ struct variable {
 	struct type_node	tnode;
 
 	// contain member variable.
-	struct list_head	*member;
+	struct list_head	member;
 };
 
-static inline struct variable create_new_variable()
+static inline struct variable *create_new_variable()
 {
-	struct variable var;
-	var.var_name = NULL;
-	var.type_name = NULL;
-	var.is_array = false;
-	var.is_pointer = false;
-	var.has_child = false;
-	var.size = 0;
-	var.bound_size = 0;
-	var.base_size = 0;
-	var.enctype = 0;
-	var.addr = 0;
-	var.member = NULL;
+	struct variable *var = malloc(sizeof(struct variable));
+	INIT_LIST_HEAD(&var->list);
+	INIT_LIST_HEAD(&var->member);
+
+	var->var_name = NULL;
+	var->type_name = NULL;
+	var->is_array = false;
+	var->is_pointer = false;
+	var->has_child = false;
+	var->size = 0;
+	var->bound_size = 0;
+	var->base_size = 0;
+	var->enctype = 0;
+	var->addr = 0;
 	return var;
 }
 

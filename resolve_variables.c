@@ -373,11 +373,28 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 		else if (tag == DW_TAG_pointer_type)
 			var->is_pointer = true;
 		else if (tag == DW_TAG_structure_type) {
-			if (dwarf_haschildren(die)) {
+			if (dwarf_haschildren(&el)) {
 				var->has_child = true;
-				// handle_child(die, var);
 			}
 			var->base_size = get_type_size(&el);
+
+			Dwarf_Die child;
+			if (!var->has_child ||
+				dwarf_child(&el, &child) < 0)
+			{
+				goto err;
+			}
+
+			if (dwarf_tag(&child) == DW_TAG_member) {
+				do {
+					pr("%s\n", 0, dwarf_diename(&child));
+					struct variable *cvar = create_new_variable();
+					if (resolve_variable(&child, cvar) != 0) {
+						goto err;
+					}
+					list_add_tail(&cvar->list, &var->member);
+				} while (dwarf_siblingof(&child, &child) == 0);
+			}
 		}
 
 		else if (tag == DW_TAG_base_type) {

@@ -18,13 +18,26 @@ Dwarf_Die Die_CU;
 // declare list head as global.
 static LIST_HEAD(gvar);
 
-static void print_vars()
+
+static void print_members(struct list_head *head)
+{
+	struct variable *entry;
+	list_for_each_entry(entry, head, list)
+	{
+		printf("%30s", entry->type_name);
+		printf("%20s", entry->var_name);
+		printf("%20s", dwarf_encoding_string(entry->enctype));
+		printf("%12ld\n", entry->base_size);
+	}
+}
+
+static void print_vars(struct list_head *head)
 {
 	struct variable *entry;
 	char separator[90] = {0};
 	memset(separator, '=', sizeof(separator)-1);
 
-	if (list_empty(&gvar))
+	if (list_empty(head))
 		pr("List is Empty", 0);
 
 	printf("%s\n", separator);
@@ -32,11 +45,17 @@ static void print_vars()
 			"[ENCODING]", "[SIZE]");
 	printf("%s\n", separator);
 
-	list_for_each_entry(entry, &gvar, list) {
+	list_for_each_entry(entry, head, list) {
 		printf("%30s", entry->type_name);
 		printf("%20s", entry->var_name);
 		printf("%20s", dwarf_encoding_string(entry->enctype));
 		printf("%12ld\n", entry->base_size);
+
+		if (entry->has_child) {
+			printf("%30c\n", '{');
+			print_members(&entry->member);
+			printf("%30c\n", '}');
+		}
 	}
 }
 
@@ -56,13 +75,13 @@ int handle_die(Dwarf *dbg, Dwarf_Die *die,
 	Dwarf_Attribute attr;
 	Dwarf_Die type;
 
-	struct variable var = create_new_variable();
-	if (resolve_variable(die, &var) != 0) {
+	struct variable *var = create_new_variable();
+	if (resolve_variable(die, var) != 0) {
 		pr("resolve error\n", 1);
 		goto err;
 	}
 
-	list_add_tail(&var.list, head);
+	list_add_tail(&var->list, head);
 
 
 next:
@@ -129,6 +148,6 @@ int main (int argc, char *argv[])
 		close (fd);
 	}
 
-	print_vars();
+	print_vars(&gvar);
 	return 0;
 }
