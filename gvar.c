@@ -10,11 +10,27 @@ const char *gvar_g[10];
 
 const char const * const gvar_expr[];
 
-struct global {
+struct inner1 {
 	int a;
 	long b;
 	char *c;
 	char arr[20];
+};
+struct inner2 {
+	int a;
+	long b;
+	char *c;
+	char arr[20];
+};
+
+
+struct global {
+	int a;
+	long b;
+	char *c;
+	struct inner1 gb1;
+	char arr[20];
+	struct inner2 gb2;
 };
 
 struct global gs;

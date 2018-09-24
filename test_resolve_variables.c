@@ -1,4 +1,3 @@
-
 #include <inttypes.h>
 #include <libelf.h>
 #include <fcntl.h>
@@ -41,31 +40,41 @@ static void print_vars()
 	}
 }
 
-void handle_die(Dwarf *dbg, Dwarf_Die *die, int n)
+int handle_die(Dwarf *dbg, Dwarf_Die *die,
+		struct list_head *head)
 {
-	Dwarf_Die child;
 	unsigned int tag;
 
 	tag = dwarf_tag(die);
 	if (tag == DW_TAG_invalid)
-		return;
+		return -1;
 
+	// only handle for external variables.
 	if (!dwarf_hasattr(die, DW_AT_external) || tag != DW_TAG_variable)
 		goto next;
 
 	Dwarf_Attribute attr;
 	Dwarf_Die type;
 
-	struct variable var;
-	if (resolve_variable(die, &var) == 0)
-		list_add_tail(&var.list, &gvar);
+	struct variable var = create_new_variable();
+	if (resolve_variable(die, &var) != 0) {
+		pr("resolve error\n", 1);
+		goto err;
+	}
+
+	list_add_tail(&var.list, head);
+
+
 next:
-	if (dwarf_haschildren(die) != 0 && dwarf_child(die, &child) == 0) {
-		handle_die(dbg, &child, n + 1);
-	}
 	if (dwarf_siblingof(die, die) == 0) {
-		handle_die(dbg, die, n);
+		handle_die(dbg, die, head);
 	}
+
+	return 0;
+
+err:
+	pr("Error occurred\n", 0);
+	return -1;
 }
 
 int main (int argc, char *argv[])
@@ -107,9 +116,10 @@ int main (int argc, char *argv[])
 
 			Dwarf_Die die;
 			if (dwarf_offdie(dbg, old_off + hsize, &die) != NULL) {
-				// keep current CU Die to Die_CU
+				// keep current CU Die while iterating child
 				memcpy(&Die_CU, &die, sizeof(Dwarf_Die));
-				handle_die(dbg, &die, 1);
+				if (dwarf_child(&die, &die) == 0)
+					handle_die(dbg, &die, &gvar);
 			}
 
 			old_off = off;

@@ -3,3 +3,8 @@ tags
 log
 cscope*
 *.swp
+
+test_resolve
+target
+show-die-info
+sample

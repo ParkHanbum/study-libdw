@@ -336,7 +336,6 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 		goto err;
 	}
 
-	struct type_node *entry;
 	pr("Start Listing resolved types\n", 3);
 
 	TYPE_PREFIX type_prefix = TYPE_PREFIX_noprefix;
@@ -346,6 +345,7 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 	char *prefix = NULL;
 	char *dtype = NULL;
 
+	struct type_node *entry;
 
 	// parsing data while iterating.
 	list_for_each_entry_reverse(entry, &(var->tnode.list), list) {
@@ -373,7 +373,10 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 		else if (tag == DW_TAG_pointer_type)
 			var->is_pointer = true;
 		else if (tag == DW_TAG_structure_type) {
-			var->has_child = true;
+			if (dwarf_haschildren(die)) {
+				var->has_child = true;
+				// handle_child(die, var);
+			}
 			var->base_size = get_type_size(&el);
 		}
 

@@ -276,10 +276,6 @@ handle (Dwarf *dbg, Dwarf_Die *die, int n)
 	printf ("%*s producer  : %s\n", n * 5, "", name);
     }
 
-  if (dwarf_haschildren (die) != 0 && dwarf_child (die, &child) == 0) {
-	  puts("[CHILD]\n");
-    handle (dbg, &child, n + 1);
-  }
   if (dwarf_siblingof (die, die) == 0) {
 	  puts("[SIBLING]\n");
     handle (dbg, die, n);
@@ -323,8 +319,14 @@ main (int argc, char *argv[])
 		  offsetsize);
 
 	  Dwarf_Die die;
-	  if (dwarf_offdie (dbg, old_off + hsize, &die) != NULL)
-	    handle (dbg, &die, 1);
+	  if (dwarf_offdie (dbg, old_off + hsize, &die) != NULL) {
+		  // first Die is children of CU
+		  if (dwarf_child(&die, &die) == 0 ) {
+			  handle (dbg, &die, 1);
+		  }
+
+		  return 0;
+	  }
 
 	  old_off = off;
 	}

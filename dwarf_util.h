@@ -36,6 +36,28 @@ struct variable {
 	struct list_head	*member;
 };
 
+static inline struct variable create_new_variable()
+{
+	struct variable var;
+	var.var_name = NULL;
+	var.type_name = NULL;
+	var.is_array = false;
+	var.is_pointer = false;
+	var.has_child = false;
+	var.size = 0;
+	var.bound_size = 0;
+	var.base_size = 0;
+	var.enctype = 0;
+	var.addr = 0;
+	var.member = NULL;
+	return var;
+}
+
+static inline bool var_has_child(struct variable *var)
+{
+	return var->has_child;
+}
+
 #ifdef dev
 # define pr(fmt, n, ...) 				\
 ({							\
