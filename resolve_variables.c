@@ -373,10 +373,14 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 		else if (tag == DW_TAG_pointer_type)
 			var->is_pointer = true;
 		else if (tag == DW_TAG_structure_type) {
+			var->base_size = get_type_size(&el);
+
+			if (var->is_pointer)
+				break;
+
 			if (dwarf_haschildren(&el)) {
 				var->has_child = true;
 			}
-			var->base_size = get_type_size(&el);
 
 			Dwarf_Die child;
 			if (!var->has_child ||
