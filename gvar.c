@@ -37,9 +37,12 @@ struct global2 {
 	struct inner1 gb1;
 	char arr[20];
 	struct inner2 gb2;
+	struct inner1 *pgb1;
+	struct inner2 *pgb2;
 };
 
 struct global gs;
+struct global2 gs2;
 
 
 void set_array(struct global *gs)

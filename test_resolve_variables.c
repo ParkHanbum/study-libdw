@@ -19,42 +19,22 @@ Dwarf_Die Die_CU;
 static LIST_HEAD(gvar);
 
 
-static void print_members(struct list_head *head)
+static void print_vars(struct list_head *head, int n)
 {
 	struct variable *entry;
-	list_for_each_entry(entry, head, list)
-	{
-		printf("%30s", entry->type_name);
-		printf("%20s", entry->var_name);
-		printf("%20s", dwarf_encoding_string(entry->enctype));
-		printf("%12ld\n", entry->base_size);
-	}
-}
 
-static void print_vars(struct list_head *head)
-{
-	struct variable *entry;
-	char separator[90] = {0};
-	memset(separator, '=', sizeof(separator)-1);
-
-	if (list_empty(head))
-		pr("List is Empty", 0);
-
-	printf("%s\n", separator);
-	printf("%30s%20s%20s%12s\n", "[TYPE]", "[NAME]",
-			"[ENCODING]", "[SIZE]");
-	printf("%s\n", separator);
-
+	char buf[128] = {0};
 	list_for_each_entry(entry, head, list) {
-		printf("%30s", entry->type_name);
-		printf("%20s", entry->var_name);
-		printf("%20s", dwarf_encoding_string(entry->enctype));
-		printf("%12ld\n", entry->base_size);
+		sprintf(buf, "%s %s %s %ld", entry->type_name,
+				dwarf_encoding_string(entry->enctype),
+				entry->var_name,
+				entry->base_size);
 
+		pro("%s\n", n, buf);
 		if (entry->has_child) {
-			printf("%30c\n", '{');
-			print_members(&entry->member);
-			printf("%30c\n", '}');
+			pro("%c\n", n, '{');
+			print_vars(&entry->member, n+2);
+			pro("%c\n", n, '}');
 		}
 	}
 }
@@ -148,6 +128,6 @@ int main (int argc, char *argv[])
 		close (fd);
 	}
 
-	print_vars(&gvar);
+	print_vars(&gvar, 0);
 	return 0;
 }

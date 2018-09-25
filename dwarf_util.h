@@ -67,8 +67,21 @@ static inline bool var_has_child(struct variable *var)
  	printf("%20s:%-5d\t", __FILE__, __LINE__);		\
 	printf("%*s  " fmt, n * 5, "", ## __VA_ARGS__);	\
 })
+# define prd(fmt, n, ...) 				\
+({							\
+ 	printf("%20s:%-5d\t", __FILE__, __LINE__);		\
+	printf("%*s  " fmt, n * 5, "", ## __VA_ARGS__);	\
+})
+
+# define pro(fmt, n, ...) 				\
+({							\
+	printf("%*s  " fmt, n * 5, "", ## __VA_ARGS__);	\
+})
+
 #else
 # define pr(fmt, n, ...)
+# define prd(fmt, n, ...)
+# define pro(fmt, n, ...)
 #endif
 
 static const char *dwarf_tag_string (unsigned int tag)
