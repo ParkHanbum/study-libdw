@@ -98,9 +98,16 @@ static int get_prefix_name(TYPE_PREFIX type_prefix, char **res)
 		assemble = realloc(assemble, alloc_size);
 		strcpy(assemble, TYPE_STR_shared);
 	}
+	if (type_prefix & TYPE_PREFIX_reference) {
+		alloc_size += sizeof(TYPE_STR_reference);
+		assemble = realloc(assemble, alloc_size);
+		strcpy(assemble, TYPE_STR_reference);
+	}
 
-	*res = malloc(strlen(assemble));
-	strcpy(*res, assemble);
+	*res = strdup(assemble);
+	free(assemble);
+	// *res = malloc(strlen(assemble));
+	// strcpy(*res, assemble);
 	return 0;
 }
 
@@ -175,9 +182,12 @@ static Dwarf_Word get_array_size(Dwarf_Die *array_die)
 			else
 				count = upper - lower + 1;
 		}
+
+		free(die);
 		return count;
 	}
 
+	free(die);
 	return 0;
 }
 
@@ -197,35 +207,43 @@ static int get_type_name(Dwarf_Die *die, char **res)
 		else {
 			sprintf(assemble, "[]");
 		}
-		*res = malloc(strlen(assemble));
-		strcpy(*res, assemble);
+		*res = strdup(assemble);
 	} else if (tag == DW_TAG_pointer_type) {
-		*res = malloc(sizeof(TYPE_STR_pointer));
-		strcpy(*res, TYPE_STR_pointer);
+		*res = strdup(TYPE_STR_pointer);
 	} else if (tag == DW_TAG_structure_type) {
 		const char *str = dwarf_diename(die);
 		sprintf(assemble, "%s %s", TYPE_STR_structure, str);
-		*res = malloc(strlen(assemble));
-		strncpy(*res, assemble, strlen(assemble));
+		*res = strdup(assemble);
+	} else if (tag == DW_TAG_enumeration_type) {
+		const char *str = dwarf_diename(die);
+		sprintf(assemble, "%s %s", TYPE_STR_enum, str);
+		*res = strdup(assemble);
 	} else if (tag == DW_TAG_base_type) {
 		const char *str = dwarf_diename(die);
-		*res = malloc(strlen(str));
-		strncpy(*res, str, strlen(str));
+		*res = strdup(str);
+	} else if (tag == DW_TAG_reference_type) {
+		*res = strdup(TYPE_STR_reference);
+	} else {
+		const char *str = dwarf_diename(die);
+		if (str == NULL)
+			str = dwarf_tag_string(dwarf_tag(die));
+		*res = strdup(str);
 	}
-	pr("[RESOLVE] %d %s\n", 2, tag, *res);
+	// pr("[RESOLVE] %s %s\n", 2, dwarf_tag_string(tag), *res);
 	return 0;
 }
 
 static int is_prefix_type(int tag)
 {
-	if ((tag == DW_TAG_typedef
+	if (tag == DW_TAG_typedef
 		|| tag == DW_TAG_const_type
 		|| tag == DW_TAG_volatile_type
 		|| tag == DW_TAG_restrict_type
 		|| tag == DW_TAG_atomic_type
 		|| tag == DW_TAG_immutable_type
 		|| tag == DW_TAG_packed_type
-		|| tag == DW_TAG_shared_type))
+		|| tag == DW_TAG_shared_type
+		|| tag == DW_TAG_reference_type)
 		return 0;
 
 	return 1;
@@ -257,6 +275,9 @@ static void set_type_prefix(int tag, TYPE_PREFIX *type_prefix)
 			break;
 		case DW_TAG_shared_type:
 			*type_prefix |= TYPE_PREFIX_shared;
+			break;
+		case DW_TAG_reference_type:
+			*type_prefix |= TYPE_PREFIX_reference;
 			break;
 	};
 }
@@ -306,6 +327,22 @@ err:
 	return -1;
 }
 
+static void print_type_node(struct list_head *head)
+{
+	struct type_node *entry;
+
+	pr("=================node===================\n",0);
+	list_for_each_entry_reverse(entry, head, list)
+	{
+		Dwarf_Die el = entry->die;
+		pr("%d %s %s\n", 0, dwarf_tag(&el),
+				dwarf_tag_string(dwarf_tag(&el)),
+				dwarf_diename(&el));
+	}
+	pr("=================node===================\n",0);
+
+}
+
 int resolve_variable(Dwarf_Die *die, struct variable *var)
 {
 	Dwarf_Attribute attr;
@@ -316,8 +353,12 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 	pr("VAR NAME : %s\n", 0, dwarf_diename(die));
 
 	name = dwarf_diename(die);
-	var->var_name = malloc(strlen(name));
-	strcpy(var->var_name, name);
+	int len = strlen(name);
+	var->var_name = malloc(len+1);
+	strncpy(var->var_name, name, len+1);
+
+	if (dwarf_tag(die) == DW_TAG_subprogram)
+		var->is_function = true;
 
 	if (resolve_type_node(
 				dwarf_formref_die(
@@ -331,6 +372,8 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 		goto err;
 	}
 
+	print_type_node(&var->tnode.list);
+
 	if (list_empty(&var->tnode.list)) {
 		pr("LIST NULL\n", 3);
 		goto err;
@@ -339,9 +382,9 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 	pr("Start Listing resolved types\n", 3);
 
 	TYPE_PREFIX type_prefix = TYPE_PREFIX_noprefix;
-	char resolve[128] = {0,};
-	char assemble[128] = {0,};
-	char typed[128] = {0,};
+	char resolve[128] = {0};
+	char assemble[128] = {0};
+	char typed[128] = {0};
 	char *prefix = NULL;
 	char *dtype = NULL;
 
@@ -366,17 +409,20 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 
 			sprintf(assemble, "%s %s", typed, resolve);
 			strcpy(resolve, assemble);
+			free(dtype);
 		}
 
 		if (tag == DW_TAG_array_type)
 			var->is_array = true;
 		else if (tag == DW_TAG_pointer_type)
 			var->is_pointer = true;
-		else if (tag == DW_TAG_structure_type) {
+		else if (tag == DW_TAG_structure_type
+				&& !var->is_function)
+		{
 			var->base_size = get_type_size(&el);
 
 			if (var->is_pointer)
-				break;
+				goto next_entry;
 
 			if (dwarf_haschildren(&el)) {
 				var->has_child = true;
@@ -386,7 +432,7 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 			if (!var->has_child ||
 				dwarf_child(&el, &child) < 0)
 			{
-				goto err;
+				goto next_entry;
 			}
 
 			if (dwarf_tag(&child) == DW_TAG_member) {
@@ -406,13 +452,19 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 			var->enctype = get_type_encode(&el);
 		}
 
+next_entry:
 		pr("%s %s \n", 6,
 			dwarf_tag_string(dwarf_tag(&entry->die)),
 			dwarf_diename(&entry->die));
 	}
 
-	var->type_name = malloc(strlen(resolve));
-	strcpy(var->type_name, resolve);
+	var->type_name = strdup(resolve);
+	// var->type_name = malloc(strlen(resolve));
+	// strcpy(var->type_name, resolve);
+
+	pr("resolved %s %s\n", 6,
+		var->type_name,
+		var->var_name);
 
 	// resolve finished.
 	return 0;

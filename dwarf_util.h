@@ -14,6 +14,7 @@ struct variable {
 	char			*var_name;
 	char			*type_name;
 
+	bool			is_function;
 	bool			is_array;
 	bool			is_pointer;
 	bool			has_child;
@@ -45,6 +46,8 @@ static inline struct variable *create_new_variable()
 
 	var->var_name = NULL;
 	var->type_name = NULL;
+
+	var->is_function = false;
 	var->is_array = false;
 	var->is_pointer = false;
 	var->has_child = false;
@@ -133,6 +136,7 @@ static const char *dwarf_encoding_string (unsigned int code)
 #define TYPE_PREFIX_immutable	1<<5
 #define TYPE_PREFIX_packed	1<<6
 #define TYPE_PREFIX_shared	1<<7
+#define TYPE_PREFIX_reference	1<<8
 
 // Prefix Strings
 #define TYPE_STR_typedef	"typedef"
@@ -148,6 +152,9 @@ static const char *dwarf_encoding_string (unsigned int code)
 #define TYPE_STR_array		"[]"
 #define TYPE_STR_pointer	"*"
 #define TYPE_STR_structure	"struct"
+#define TYPE_STR_enum		"enum"
+#define TYPE_STR_reference	"&"
+
 
 // to keep current iterated CU
 extern Dwarf *dbg;
