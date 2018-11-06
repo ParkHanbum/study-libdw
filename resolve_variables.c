@@ -1,3 +1,17 @@
+/*
+ * resolve variables types and names.
+ *
+ * some code of this file has copied from elfutils.
+ * following the License that descripted belows.
+ *
+ * You should have received copies of the GNU General Public License and
+ * the GNU Lesser General Public License along with this program.  If
+ * not, see <http://www.gnu.org/licenses/>
+ *
+ * Copyright (C) 2016 Red Hat, Inc.
+ *
+ */
+
 #include <inttypes.h>
 #include <libelf.h>
 #include <fcntl.h>
@@ -10,6 +24,61 @@
 #include "dwarf.h"
 #include "dwarf_util.h"
 
+/*
+ * Determine default lower bound from language, as per the DWARF5
+ * "Subrange Type Entries" table.
+ */
+int default_lower_bound(int lang, Dwarf_Sword *result)
+{
+	switch (lang)
+	{
+		case DW_LANG_C:
+		case DW_LANG_C89:
+		case DW_LANG_C99:
+		case DW_LANG_C11:
+		case DW_LANG_C_plus_plus:
+		case DW_LANG_C_plus_plus_03:
+		case DW_LANG_C_plus_plus_11:
+		case DW_LANG_C_plus_plus_14:
+		case DW_LANG_ObjC:
+		case DW_LANG_ObjC_plus_plus:
+		case DW_LANG_Java:
+		case DW_LANG_D:
+		case DW_LANG_Python:
+		case DW_LANG_UPC:
+		case DW_LANG_OpenCL:
+		case DW_LANG_Go:
+		case DW_LANG_Haskell:
+		case DW_LANG_OCaml:
+		case DW_LANG_Rust:
+		case DW_LANG_Swift:
+		case DW_LANG_Dylan:
+		case DW_LANG_RenderScript:
+		case DW_LANG_BLISS:
+			*result = 0;
+			return 0;
+
+		case DW_LANG_Ada83:
+		case DW_LANG_Ada95:
+		case DW_LANG_Cobol74:
+		case DW_LANG_Cobol85:
+		case DW_LANG_Fortran77:
+		case DW_LANG_Fortran90:
+		case DW_LANG_Fortran95:
+		case DW_LANG_Fortran03:
+		case DW_LANG_Fortran08:
+		case DW_LANG_Pascal83:
+		case DW_LANG_Modula2:
+		case DW_LANG_Modula3:
+		case DW_LANG_PLI:
+		case DW_LANG_Julia:
+			*result = 1;
+			return 0;
+
+		default:
+			return -1;
+	}
+}
 
 static int get_type_size(Dwarf_Die *base)
 {
@@ -53,62 +122,52 @@ static int get_diename(Dwarf_Die *die, char *name)
 	return 0;
 }
 
-static int get_prefix_name(TYPE_PREFIX type_prefix, char **res)
+static char *get_prefix_name(TYPE_PREFIX type_prefix)
 {
 	char *assemble = NULL;
-	unsigned long alloc_size = 0;
+	char buf[1024] = {0};
+	unsigned int alloc_size = 0;
 
 	if (type_prefix & TYPE_PREFIX_typedef) {
 		alloc_size += sizeof(TYPE_STR_typedef);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_typedef);
+		strcpy(buf, TYPE_STR_typedef);
 	}
 	if (type_prefix & TYPE_PREFIX_const) {
 		alloc_size += sizeof(TYPE_STR_const);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_const);
+		strcpy(buf, TYPE_STR_const);
 	}
 	if (type_prefix & TYPE_PREFIX_volatile) {
 		alloc_size += sizeof(TYPE_STR_volatile);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_volatile);
+		strcpy(buf, TYPE_STR_volatile);
 	}
 	if (type_prefix & TYPE_PREFIX_restrict) {
 		alloc_size += sizeof(TYPE_STR_restrict);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_restrict);
+		strcpy(buf, TYPE_STR_restrict);
 	}
 	if (type_prefix & TYPE_PREFIX_atomic) {
 		alloc_size += sizeof(TYPE_STR_atomic);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_atomic);
+		strcpy(buf, TYPE_STR_atomic);
 	}
 	if (type_prefix & TYPE_PREFIX_immutable) {
 		alloc_size += sizeof(TYPE_STR_immutable);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_immutable);
+		strcpy(buf, TYPE_STR_immutable);
 	}
 	if (type_prefix & TYPE_PREFIX_packed) {
 		alloc_size += sizeof(TYPE_STR_packed);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_packed);
+		strcpy(buf, TYPE_STR_packed);
 	}
 	if (type_prefix & TYPE_PREFIX_shared) {
 		alloc_size += sizeof(TYPE_STR_shared);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_shared);
+		strcpy(buf, TYPE_STR_shared);
 	}
 	if (type_prefix & TYPE_PREFIX_reference) {
 		alloc_size += sizeof(TYPE_STR_reference);
-		assemble = realloc(assemble, alloc_size);
-		strcpy(assemble, TYPE_STR_reference);
+		strcpy(buf, TYPE_STR_reference);
 	}
 
-	*res = strdup(assemble);
-	free(assemble);
-	// *res = malloc(strlen(assemble));
-	// strcpy(*res, assemble);
-	return 0;
+	assemble = malloc(alloc_size+1);
+	strncpy(assemble, buf, alloc_size+1);
+	return assemble;
 }
 
 static Dwarf_Word get_array_size(Dwarf_Die *array_die)
@@ -127,7 +186,7 @@ static Dwarf_Word get_array_size(Dwarf_Die *array_die)
 		if (dwarf_tag(die) != DW_TAG_subrange_type) {
 			// return 0 unknown array size;
 			pr("NO subrange child\n", 3);
-			return 0;
+			goto out;
 		}
 
 		/* This has either DW_AT_count or DW_AT_upper_bound.  */
@@ -135,7 +194,7 @@ static Dwarf_Word get_array_size(Dwarf_Die *array_die)
 		{
 			if (dwarf_formudata(&attr_mem, &count) != 0) {
 				pr("reading attribute failed\n", 3);
-				return 0;
+				goto out;
 			}
 		}
 		else
@@ -148,7 +207,7 @@ static Dwarf_Word get_array_size(Dwarf_Die *array_die)
 						 &attr_mem), &upper) != 0)
 			{
 				pr("reading attribute failed\n", 3);
-				return 0;
+				goto out;
 			}
 
 			/* Having DW_AT_lower_bound is optional.  */
@@ -158,7 +217,7 @@ static Dwarf_Word get_array_size(Dwarf_Die *array_die)
 				if (dwarf_formsdata(&attr_mem, &lower) != 0)
 				{
 					pr("reading attribute failed\n", 3);
-					return 0;
+					goto out;
 				}
 			}
 			else
@@ -167,12 +226,12 @@ static Dwarf_Word get_array_size(Dwarf_Die *array_die)
 				if (lang == -1 || default_lower_bound(lang, &lower) != 0)
 				{
 					pr("reading attribute[lower] failed\n", 3);
-					return 0;
+					goto out;
 				}
 			}
 			if (lower > upper) {
 				pr("LOWER bigger than UPPER\n", 3);
-				return 0;
+				goto out;
 			}
 			pr("LOWER : %ld\t UPPER : %ld\n", 3, lower, upper);
 
@@ -182,11 +241,11 @@ static Dwarf_Word get_array_size(Dwarf_Die *array_die)
 			else
 				count = upper - lower + 1;
 		}
-
-		free(die);
-		return count;
 	}
+	free(die);
+	return count;
 
+out:
 	free(die);
 	return 0;
 }
@@ -229,7 +288,6 @@ static int get_type_name(Dwarf_Die *die, char **res)
 			str = dwarf_tag_string(dwarf_tag(die));
 		*res = strdup(str);
 	}
-	// pr("[RESOLVE] %s %s\n", 2, dwarf_tag_string(tag), *res);
 	return 0;
 }
 
@@ -343,6 +401,21 @@ static void print_type_node(struct list_head *head)
 
 }
 
+int parse_member(Dwarf_Die *child, struct variable *parent)
+{
+	do {
+		pr("%s\n", 0, dwarf_diename(child));
+		struct variable *cvar = create_new_variable();
+		if (resolve_variable(child, cvar) != 0) {
+			pr("Error occured \n", 0);
+			return -1;
+		}
+		list_add_tail(&cvar->list, &(parent->member));
+	} while (dwarf_siblingof(child, child) == 0);
+
+	return 0;
+}
+
 int resolve_variable(Dwarf_Die *die, struct variable *var)
 {
 	Dwarf_Attribute attr;
@@ -400,9 +473,10 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 		} else {
 			get_type_name(&el, &dtype);
 			if (type_prefix) {
-				get_prefix_name(type_prefix, &prefix);
+				prefix = get_prefix_name(type_prefix);
 				type_prefix = TYPE_PREFIX_noprefix;
 				assemble_type(typed, prefix, dtype, tag);
+				free(prefix);
 			} else {
 				strcpy(typed, dtype);
 			}
@@ -436,14 +510,8 @@ int resolve_variable(Dwarf_Die *die, struct variable *var)
 			}
 
 			if (dwarf_tag(&child) == DW_TAG_member) {
-				do {
-					pr("%s\n", 0, dwarf_diename(&child));
-					struct variable *cvar = create_new_variable();
-					if (resolve_variable(&child, cvar) != 0) {
-						goto err;
-					}
-					list_add_tail(&cvar->list, &var->member);
-				} while (dwarf_siblingof(&child, &child) == 0);
+				if (parse_member(&child, var) < 0)
+					goto err;
 			}
 		}
 
@@ -459,9 +527,6 @@ next_entry:
 	}
 
 	var->type_name = strdup(resolve);
-	// var->type_name = malloc(strlen(resolve));
-	// strcpy(var->type_name, resolve);
-
 	pr("resolved %s %s\n", 6,
 		var->type_name,
 		var->var_name);

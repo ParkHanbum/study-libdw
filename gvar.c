@@ -12,6 +12,7 @@ const char const * const gvar_expr[];
 
 struct inner1 {
 	int a;
+	unsigned int ua;
 	long b;
 	char *c;
 	char arr[20];
