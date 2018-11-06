@@ -30,11 +30,11 @@ static void print_vars(struct list_head *head, int n)
 				entry->var_name,
 				entry->base_size);
 
-		pro("%s\n", n, buf);
+		pr_o("%s\n", n, buf);
 		if (entry->has_child) {
-			pro("%c\n", n, '{');
+			pr_o("%c\n", n, '{');
 			print_vars(&entry->member, n+2);
-			pro("%c\n", n, '}');
+			pr_o("%c\n", n, '}');
 		}
 	}
 }

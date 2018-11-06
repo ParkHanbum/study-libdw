@@ -70,21 +70,21 @@ static inline bool var_has_child(struct variable *var)
  	printf("%20s:%-5d\t", __FILE__, __LINE__);		\
 	printf("%*s  " fmt, n * 5, "", ## __VA_ARGS__);	\
 })
-# define prd(fmt, n, ...) 				\
+# define pr_d(fmt, n, ...) 				\
 ({							\
  	printf("%20s:%-5d\t", __FILE__, __LINE__);		\
 	printf("%*s  " fmt, n * 5, "", ## __VA_ARGS__);	\
 })
 
-# define pro(fmt, n, ...) 				\
+# define pr_o(fmt, n, ...) 				\
 ({							\
 	printf("%*s  " fmt, n * 5, "", ## __VA_ARGS__);	\
 })
 
 #else
 # define pr(fmt, n, ...)
-# define prd(fmt, n, ...)
-# define pro(fmt, n, ...)
+# define pr_d(fmt, n, ...)
+# define pr_o(fmt, n, ...)
 #endif
 
 static const char *dwarf_tag_string (unsigned int tag)
@@ -162,4 +162,3 @@ extern Dwarf_Die Die_CU;
 
 int resolve_variable(Dwarf_Die *die, struct variable *var);
 int resolve_type_name(Dwarf_Die *die, struct variable *var);
-int default_lower_bound(int lang, Dwarf_Sword *result);
