@@ -355,7 +355,7 @@ static int resolve_type_node(Dwarf_Die *die, struct list_head *head)
 {
 	struct type_node *tnode;
 
-	if (head == NULL)
+	if (head == NULL || die == NULL)
 		goto err;
 
 	while(true) {
